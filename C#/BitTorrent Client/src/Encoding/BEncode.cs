@@ -1,8 +1,11 @@
-﻿using System.Text.Json;
+﻿using codecrafters_bittorrent.src.Enum;
+using codecrafters_bittorrent.src.Objects;
+using System.Text;
+using System.Text.Json;
 
 namespace codecrafters_bittorrent.src.Encoding
 {
-    public static class BEncode
+    public static class Bencode
     {
         #region Constants
         private const char INTEGER_START = 'i';
@@ -11,33 +14,59 @@ namespace codecrafters_bittorrent.src.Encoding
         private const char LIST_END = 'e';
         #endregion
 
+        #region Encoding
+        public static string Encode(DecodedObject obj)
+        {
+            switch (obj.BencodeType)
+            {
+                case BencodeType.ByteString:
+                    return EncodeByteString(obj);
+                case BencodeType.Integer:
+                    return EncodeInteger(obj);
+                default:
+                    return EncodeList(obj);
+            }
+        }
+
+        private static string EncodeByteString(DecodedObject obj)
+        {
+            var value = ((string)obj.Value);
+            var length = (int)value.Length;
+            return $"{length}:{value}";
+        }
+
+        private static string EncodeInteger(DecodedObject obj)
+        {
+            return $"{INTEGER_START}{obj.Value}{INTEGER_END}";
+        }
+
+        private static string EncodeList(DecodedObject obj)
+        {
+            var sb = new StringBuilder();
+            var list = (List<DecodedObject>)obj.Value;
+            foreach (var item in list)
+            {
+                sb.Append(Encode(item));
+            }
+
+            return $"{LIST_START}{sb.ToString()}{LIST_END}";
+        }
+        #endregion
+        
         #region Decoding
-        public static string Decode(string value)
+        public static DecodedObject Decode(string value)
         {
             var decodingType = GetDecodingType(value);
             switch (decodingType)
             {
                 case "String":
-                    return DecodeString(value);
+                    return new DecodedObject(DecodeString(value), BencodeType.ByteString);
                 case "Integer":
-                    return DecodeInteger(value);
+                    return new DecodedObject(DecodeInteger(value), BencodeType.Integer);
                 case "List":
-                    return DecodeList(value);
+                    return new DecodedObject(DecodeList(value), BencodeType.List);
                 default:
                     throw new NotImplementedException();
-            }
-        }
-
-        private static string DecodeList(string value)
-        {
-            var lastIndex = value.LastIndexOf(LIST_END);
-            if (lastIndex != -1)
-            {
-
-            }
-            else
-            {
-                throw new InvalidOperationException($"Invalid encoded value for List: {value}");
             }
         }
 
@@ -65,10 +94,10 @@ namespace codecrafters_bittorrent.src.Encoding
         {
             var colonIndex = value.IndexOf(':');
             if (colonIndex != -1)
-            {;
+            {
                 var strLength = int.Parse(value[..colonIndex]);
-                var strValue = value.Substring(colonIndex + 1, strLength);
-                return JsonSerializer.Serialize(strValue);
+                var result = value.Substring(colonIndex + 1, strLength);
+                return result;
             }
             else
             {
@@ -76,7 +105,7 @@ namespace codecrafters_bittorrent.src.Encoding
             }
         }
 
-        private static string DecodeInteger(string value)
+        private static long DecodeInteger(string value)
         {
             var endIndex = value.IndexOf(INTEGER_END);
             if (endIndex != -1)
@@ -84,7 +113,7 @@ namespace codecrafters_bittorrent.src.Encoding
                 var integerPart = value.Substring(1, endIndex - 1);
                 if (long.TryParse(integerPart, out long result))
                 {
-                    return JsonSerializer.Serialize(result);
+                    return result;
                 }
                 else
                 {
@@ -95,6 +124,24 @@ namespace codecrafters_bittorrent.src.Encoding
             {
                 throw new InvalidOperationException($"Invalid encoded value for Integer: {value}");
             }
+        }
+
+        private static List<DecodedObject> DecodeList(string value)
+        {
+            var result = new List<DecodedObject>();
+
+            value = value[1..];
+            while (value[0] != LIST_END)
+            {
+                var item = Decode(value);
+                result.Add(item);
+                
+                var offset = Encode(item).Length;
+
+                value = value[offset..];
+            }
+
+            return result;
         }
 
         #endregion

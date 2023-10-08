@@ -1,4 +1,6 @@
 ﻿using codecrafters_bittorrent.src.Encoding;
+using codecrafters_bittorrent.src.Enum;
+using codecrafters_bittorrent.src.Objects;
 using System.Text.Json;
 
 // Parse arguments
@@ -9,11 +11,13 @@ var (command, param) = args.Length switch
     _ => (args[0], args[1])
 };
 
-// Parse command and act accordingly
 if (command == "decode")
 {
-    string decodedValue = BEncode.Decode(param);
-    Console.WriteLine(decodedValue);
+    var options = new JsonSerializerOptions();
+    options.Converters.Add(new DecodedObjectConverter());
+
+    var decodedObject = Bencode.Decode(param);
+    Console.WriteLine(JsonSerializer.Serialize(decodedObject, options));
 }
 else
 {
