@@ -1,7 +1,6 @@
 ﻿using codecrafters_bittorrent.src.Enum;
 using codecrafters_bittorrent.src.Objects;
 using System.Text;
-using System.Text.Json;
 
 namespace codecrafters_bittorrent.src.Encoding
 {
@@ -12,6 +11,8 @@ namespace codecrafters_bittorrent.src.Encoding
         private const char INTEGER_END = 'e';
         private const char LIST_START = 'l';
         private const char LIST_END = 'e';
+        private const char DICTIONARY_START = 'd';
+        private const char DICTIONARY_END = 'e';
         #endregion
 
         #region Encoding
@@ -23,8 +24,12 @@ namespace codecrafters_bittorrent.src.Encoding
                     return EncodeByteString(obj);
                 case BencodeType.Integer:
                     return EncodeInteger(obj);
-                default:
+                case BencodeType.List:
                     return EncodeList(obj);
+                case BencodeType.Dictionary:
+                    return EncodeDictionary(obj);
+                default:
+                    throw new InvalidOperationException("Invalid object for encoding. ");
             }
         }
 
@@ -49,10 +54,22 @@ namespace codecrafters_bittorrent.src.Encoding
                 sb.Append(Encode(item));
             }
 
-            return $"{LIST_START}{sb.ToString()}{LIST_END}";
+            return $"{LIST_START}{sb}{LIST_END}";
+        }
+
+        private static string EncodeDictionary(DecodedObject obj)
+        {
+            var sb = new StringBuilder();
+            var dict = (Dictionary<string, DecodedObject>)obj.Value;
+            foreach (var (key, value) in dict)
+            {
+                sb.Append(Encode(new DecodedObject(key, BencodeType.ByteString)) + Encode(value));
+            }
+
+            return $"{DICTIONARY_START}{sb}{DICTIONARY_END}";
         }
         #endregion
-        
+
         #region Decoding
         public static DecodedObject Decode(string value)
         {
@@ -65,6 +82,8 @@ namespace codecrafters_bittorrent.src.Encoding
                     return new DecodedObject(DecodeInteger(value), BencodeType.Integer);
                 case "List":
                     return new DecodedObject(DecodeList(value), BencodeType.List);
+                case "Dictionary":
+                    return new DecodedObject(DecodeDictionary(value), BencodeType.Dictionary);
                 default:
                     throw new NotImplementedException();
             }
@@ -83,6 +102,10 @@ namespace codecrafters_bittorrent.src.Encoding
             else if (value[0].Equals(LIST_START))
             {
                 return "List";
+            }
+            else if (value[0].Equals(DICTIONARY_START))
+            {
+                return "Dictionary";
             }
             else
             {
@@ -110,7 +133,7 @@ namespace codecrafters_bittorrent.src.Encoding
             var endIndex = value.IndexOf(INTEGER_END);
             if (endIndex != -1)
             {
-                var integerPart = value.Substring(1, endIndex - 1);
+                var integerPart = value[1..endIndex];
                 if (long.TryParse(integerPart, out long result))
                 {
                     return result;
@@ -139,6 +162,30 @@ namespace codecrafters_bittorrent.src.Encoding
                 var offset = Encode(item).Length;
 
                 value = value[offset..];
+            }
+
+            return result;
+        }
+
+        private static Dictionary<string, DecodedObject> DecodeDictionary(string value)
+        {
+            var result = new Dictionary<string, DecodedObject>();
+
+            value = value[1..];
+            while (value[0] != DICTIONARY_END)
+            {
+                var dictKey = Decode(value);
+                var offset = Encode(dictKey).Length;
+                value = value[offset..];
+
+                if (dictKey.BencodeType != BencodeType.ByteString)
+                    throw new InvalidDataException($"Dictionary key {dictKey.Value} is not a ByteString.");
+
+                var dictValue = Decode(value);
+                offset = Encode(dictValue).Length;
+                value = value[offset..];
+
+                result.Add((string)dictKey.Value, dictValue);
             }
 
             return result;
