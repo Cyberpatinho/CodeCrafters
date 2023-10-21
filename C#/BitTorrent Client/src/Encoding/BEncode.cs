@@ -36,8 +36,13 @@ namespace codecrafters_bittorrent.src.Bencode
 
                 case BencodeType.List:
                     return new DecodedObject(
-                        DecodeList(encodedObj.Skip(1).ToArray())
-                        , BencodeType.List);
+                        DecodeList(encodedObj.Skip(1).ToArray()), 
+                        BencodeType.List);
+
+                case BencodeType.Dictionary:
+                    return new DecodedObject(
+                        DecodeDictionary(encodedObj.Skip(1).ToArray()), 
+                        BencodeType.Dictionary);
 
                 default:
                     throw new NotImplementedException();
@@ -80,9 +85,34 @@ namespace codecrafters_bittorrent.src.Bencode
                 var item = Decode(encodedObj);
                 result.Add(item);
 
-                int offset = Encode(item).Length;
+                var offset = Encode(item).Length;
 
                 encodedObj = encodedObj.Skip(offset).ToArray();
+            }
+
+            return result;
+        }
+
+        private static Dictionary<string, DecodedObject> DecodeDictionary(byte[] encodedObj)
+        {
+            var result = new Dictionary<string, DecodedObject>();
+
+            int idx = 0;
+            while (encodedObj[idx] != DICTIONARY_END)
+            {
+                var dictKey = Decode(encodedObj);
+                int offset = Encode(dictKey).Length;
+
+                encodedObj = encodedObj.Skip(offset).ToArray();
+
+                if (dictKey.BencodeType != BencodeType.ByteString)
+                    throw new InvalidDataException($"Dictionary key {dictKey.Value} is not a ByteString.");
+
+                var dictValue = Decode(encodedObj);
+                offset = Encode(dictValue).Length;
+                encodedObj = encodedObj.Skip(offset).ToArray();
+
+                result.Add(Helper.ToUTF8((byte[])dictKey.Value), dictValue);
             }
 
             return result;
@@ -103,10 +133,12 @@ namespace codecrafters_bittorrent.src.Bencode
             {
                 return BencodeType.List;
             }
-            else
+            else if (firstByte.Equals(DICTIONARY_START))
             {
-                throw new InvalidOperationException($"Unhandled encoding: {Helper.ToUTF8(encodedObj)}.");
+                return BencodeType.Dictionary;
             }
+            else
+                throw new InvalidOperationException($"Unhandled encoding: {Helper.ToUTF8(encodedObj)}.");
         }
 
         #endregion
@@ -122,6 +154,8 @@ namespace codecrafters_bittorrent.src.Bencode
                     return EncodeInteger(decodedObj);
                 case BencodeType.List:
                     return EncodeList(decodedObj);
+                case BencodeType.Dictionary:
+                    return EncodeDictionary(decodedObj);
                 default:
                     throw new InvalidOperationException($"Error: Unable to encode {decodedObj.Value} of type {decodedObj.BencodeType}");
             }
@@ -137,6 +171,13 @@ namespace codecrafters_bittorrent.src.Bencode
                 buffer.Append(Helper.ToByteArray(utf8Len));
                 buffer.Append(LENGTH_SEPARATOR);
                 buffer.Append(byteArr);
+            }
+            else if (decodedObj.Value is string str)
+            {
+                string strLen = str.Length.ToString();
+                buffer.Append(Helper.ToByteArray(strLen));
+                buffer.Append(LENGTH_SEPARATOR);
+                buffer.Append(Helper.ToByteArray(str));
             }
             else
                 throw new InvalidOperationException($"Error: Encoding object was not of type: {typeof(byte[])}");
@@ -171,14 +212,31 @@ namespace codecrafters_bittorrent.src.Bencode
                 buffer.Append(LIST_START);
 
                 foreach (var obj in list)
-                {
                     buffer.Append(Encode(obj));
-                }
 
                 buffer.Append(LIST_END);
             }
             else 
                 throw new InvalidOperationException($"Error: Encoding object was not of type: {typeof(List<DecodedObject>)}");
+
+            return buffer.ToArray();
+        }
+
+        private static byte[] EncodeDictionary(DecodedObject decodedObj)
+        {
+            var buffer = new MemoryStream();
+            if (decodedObj.Value is Dictionary<string, DecodedObject> dict)
+            {
+                buffer.Append(DICTIONARY_START);
+                foreach (var (key, val) in dict)
+                {
+                    buffer.Append(Encode(new DecodedObject(key, BencodeType.ByteString)));
+                    buffer.Append(Encode(val));
+                }
+                buffer.Append(DICTIONARY_END);
+            }
+            else
+                throw new InvalidOperationException($"Error: Encoding object was not of type: {typeof(Dictionary<string, DecodedObject>)}");
 
             return buffer.ToArray();
         }
