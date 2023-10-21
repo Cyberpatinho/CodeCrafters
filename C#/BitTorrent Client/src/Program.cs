@@ -17,7 +17,8 @@ if (command == "decode")
     var options = new JsonSerializerOptions();
     options.Converters.Add(new DecodedObjectConverter());
 
-    var decodedObject = Bencode.Decode(param);
+    byte[] bytes = Helper.ToByteArray(param);
+    var decodedObject = Bencode.Decode(bytes);
     Console.WriteLine(JsonSerializer.Serialize(decodedObject, options));
 }
 else
