@@ -1,13 +1,9 @@
 ﻿using codecrafters_bittorrent.src.Objects;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using System.Threading.Tasks;
+using codecrafters_bittorrent.src.Services;
 
-namespace codecrafters_bittorrent.src.Encoding
+namespace codecrafters_bittorrent.src.Bencode
 {
     public class DecodedObjectConverter : JsonConverter<DecodedObject>
     {
@@ -18,7 +14,15 @@ namespace codecrafters_bittorrent.src.Encoding
 
         public override void Write(Utf8JsonWriter writer, DecodedObject value, JsonSerializerOptions options)
         {
-            JsonSerializer.Serialize(writer, value.Value, options);
+            if (value.Value is byte[] byteArr)
+            {
+                string utf8String = Helper.ToUTF8(byteArr);
+                JsonSerializer.Serialize(writer, utf8String, options);
+            }
+            else
+            {
+                JsonSerializer.Serialize(writer, value.Value, options);
+            }
         }
     }
 }
