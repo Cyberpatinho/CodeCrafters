@@ -2,7 +2,7 @@
   "profiles": {
     "codecrafters-bittorrent": {
         "commandName": "Project",
-        "commandLineArgs": "decode 5:hello"
+        "commandLineArgs": "decode i52e"
     }
   }
 }

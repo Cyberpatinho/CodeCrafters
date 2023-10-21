@@ -13,5 +13,10 @@ namespace codecrafters_bittorrent.src.Services
         {
             return Encoding.UTF8.GetBytes(obj);
         }
+
+        public static bool IsDigit (byte b)
+        {
+            return b >= (byte)'0' && b <= (byte)'9';
+        }
     }
 }

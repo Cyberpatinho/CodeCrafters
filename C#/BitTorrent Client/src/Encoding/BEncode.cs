@@ -21,14 +21,16 @@ namespace codecrafters_bittorrent.src.Bencode
 
         public static DecodedObject Decode(string param)
         {
-            // Probably will need to read from file later, since torrent string accept non-Unicode characters
+            // Probably will need to read from file later, since torrent string accepts non-Unicode characters
             byte[] encodedObj = Helper.ToByteArray(param);
 
             BencodeType type = GetDecodingType(encodedObj);
             switch (type)
             {
+                case BencodeType.ByteString:
+                    return new DecodedObject(DecodeByteString(encodedObj), BencodeType.ByteString);
                 case BencodeType.Integer:
-                    return new DecodedObject(DecodeByteString(encodedObj), BencodeType.Integer);
+                    return new DecodedObject(DecodeInteger(encodedObj), BencodeType.Integer);
                 default:
                     throw new NotImplementedException();
             }
@@ -48,10 +50,26 @@ namespace codecrafters_bittorrent.src.Bencode
             return result;
         }
 
+        private static long DecodeInteger(byte[] encodedObj)
+        {
+            int endIdx = Array.IndexOf(encodedObj, INTEGER_END);
+
+            string encodedInt = Helper.ToUTF8(encodedObj.Skip(1).Take(endIdx - 1).ToArray());
+
+            if (!long.TryParse(encodedInt, out long result))
+                throw new InvalidOperationException($"Error: {encodedInt} is not a valid Integer representation.");
+
+            return result;
+        }
+
         private static BencodeType GetDecodingType(byte[] encodedObj)
         {
-            string firstByte = encodedObj[0].ToString();
-            if (int.TryParse(firstByte, out int _))
+            byte firstByte = encodedObj[0];
+            if (Helper.IsDigit(firstByte))
+            {
+                return BencodeType.ByteString;
+            }
+            else if (firstByte.Equals(INTEGER_START))
             {
                 return BencodeType.Integer;
             }
