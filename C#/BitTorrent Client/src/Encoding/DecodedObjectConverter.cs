@@ -1,9 +1,9 @@
 ﻿using codecrafters_bittorrent.src.Objects;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using codecrafters_bittorrent.src.Services;
+using codecrafters_bittorrent.src.Utils;
 
-namespace codecrafters_bittorrent.src.Bencode
+namespace codecrafters_bittorrent.src.Bencoding
 {
     public class DecodedObjectConverter : JsonConverter<DecodedObject>
     {

@@ -1,10 +1,9 @@
 ﻿using codecrafters_bittorrent.src.Enum;
 using codecrafters_bittorrent.src.Extensions;
 using codecrafters_bittorrent.src.Objects;
-using codecrafters_bittorrent.src.Services;
-using System.Text;
+using codecrafters_bittorrent.src.Utils;
 
-namespace codecrafters_bittorrent.src.Bencode
+namespace codecrafters_bittorrent.src.Bencoding
 {
     public static class Bencode
     {
@@ -180,7 +179,7 @@ namespace codecrafters_bittorrent.src.Bencode
                 buffer.Append(Helper.ToByteArray(str));
             }
             else
-                throw new InvalidOperationException($"Error: Encoding object was not of type: {typeof(byte[])}");
+                throw new InvalidOperationException($"Error: Encoding object was not of type: {typeof(byte[])} nor {typeof(string)}");
 
 
             return buffer.ToArray();

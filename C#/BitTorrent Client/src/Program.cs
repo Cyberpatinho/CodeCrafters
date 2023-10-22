@@ -1,7 +1,6 @@
-﻿using codecrafters_bittorrent.src.Bencode;
-using codecrafters_bittorrent.src.Enum;
-using codecrafters_bittorrent.src.Objects;
+﻿using codecrafters_bittorrent.src.Bencoding;
 using codecrafters_bittorrent.src.Services;
+using codecrafters_bittorrent.src.Utils;
 using System.Text.Json;
 
 // Parse arguments
@@ -20,6 +19,13 @@ if (command == "decode")
     byte[] bytes = Helper.ToByteArray(param);
     var decodedObject = Bencode.Decode(bytes);
     Console.WriteLine(JsonSerializer.Serialize(decodedObject, options));
+}
+else if (command == "info")
+{
+    var torrentService = new TorrentService(param);
+
+    Console.WriteLine(torrentService.GetInfo("Announce"));
+    Console.WriteLine(torrentService.GetInfo("Length"));
 }
 else
 {
