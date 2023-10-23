@@ -26,7 +26,8 @@ else if (command == "info")
     Console.WriteLine(torrentService.GetInfo("Announce"));
     Console.WriteLine(torrentService.GetInfo("Length"));
     Console.WriteLine(torrentService.GetInfo("Hash"));
-
+    Console.WriteLine(torrentService.GetInfo("PieceLength"));
+    Console.WriteLine(torrentService.GetInfo("Pieces"));
 }
 else
 {

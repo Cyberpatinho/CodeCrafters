@@ -21,12 +21,17 @@ namespace codecrafters_bittorrent.src.Objects
             [Name("length")]
             [Display("Length")]
             public long Length { get; set; } = 0;
+
             [Name("name")]
             public string? Name { get; set; }
+
             [Name("piece length")]
+            [Display("Piece Length")]
             public long PieceLength { get; set; } = 0;
+
             [Name("pieces")]
-            public byte[] Pieces { get; set; }
+            [Display("Piece Hashes")]
+            public byte[]? Pieces { get; set; }
         }
     }
 }

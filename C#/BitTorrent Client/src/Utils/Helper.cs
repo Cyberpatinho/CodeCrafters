@@ -31,5 +31,18 @@ namespace codecrafters_bittorrent.src.Utils
         {
             return b >= (byte)'0' && b <= (byte)'9';
         }
+
+        public static List<string> GetPiecesHashes(byte[] bytes)
+        {
+            var result = new List<string>();
+
+            for (int i = 0; i < 20; i++)
+            {
+                string sha1 = ToHexadecimal(bytes.Skip(i * 20).Take(20).ToArray());
+                result.Add(sha1);
+            }
+
+            return result;
+        }
     }
 }

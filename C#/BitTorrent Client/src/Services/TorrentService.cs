@@ -69,6 +69,9 @@ namespace codecrafters_bittorrent.src.Services
             if (displayName == null || value == null)
                 return null;
 
+            if (propertyName == "Pieces")
+                value = string.Join('\n', new[] { "" }.Concat(Helper.GetPiecesHashes((byte[])value)));
+
             return $"{displayName}: {value}";
         }
 
