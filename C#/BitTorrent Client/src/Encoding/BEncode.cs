@@ -2,6 +2,7 @@
 using codecrafters_bittorrent.src.Extensions;
 using codecrafters_bittorrent.src.Objects;
 using codecrafters_bittorrent.src.Utils;
+using System.Security.Cryptography;
 
 namespace codecrafters_bittorrent.src.Bencoding
 {
@@ -95,6 +96,7 @@ namespace codecrafters_bittorrent.src.Bencoding
         private static Dictionary<string, DecodedObject> DecodeDictionary(byte[] encodedObj)
         {
             var result = new Dictionary<string, DecodedObject>();
+            var keysInOrder = new List<string>();
 
             int idx = 0;
             while (encodedObj[idx] != DICTIONARY_END)
@@ -111,8 +113,15 @@ namespace codecrafters_bittorrent.src.Bencoding
                 offset = Encode(dictValue).Length;
                 encodedObj = encodedObj.Skip(offset).ToArray();
 
-                result.Add(Helper.ToUTF8((byte[])dictKey.Value), dictValue);
+                var strKey = Helper.ToUTF8((byte[])dictKey.Value);
+
+                keysInOrder.Add(strKey); 
+                result.Add(strKey, dictValue);
             }
+
+            var sortedKeys = result.Keys.OrderBy(k => k).ToList();
+            if (!keysInOrder.SequenceEqual(sortedKeys))
+                throw new InvalidDataException($"Error: Dictionary keys are not lexicographically sorted. {result}");
 
             return result;
         }
@@ -143,7 +152,7 @@ namespace codecrafters_bittorrent.src.Bencoding
         #endregion
 
         #region Encoding
-        private static byte[] Encode(DecodedObject decodedObj)
+        public static byte[] Encode(DecodedObject decodedObj)
         {
             switch (decodedObj.BencodeType)
             {
@@ -224,14 +233,18 @@ namespace codecrafters_bittorrent.src.Bencoding
         private static byte[] EncodeDictionary(DecodedObject decodedObj)
         {
             var buffer = new MemoryStream();
+
             if (decodedObj.Value is Dictionary<string, DecodedObject> dict)
             {
+                var sortedKeys = dict.Keys.OrderBy(k => k).ToList();
+
                 buffer.Append(DICTIONARY_START);
-                foreach (var (key, val) in dict)
+                foreach (var key in sortedKeys)
                 {
                     buffer.Append(Encode(new DecodedObject(key, BencodeType.ByteString)));
-                    buffer.Append(Encode(val));
+                    buffer.Append(Encode(dict[key]));
                 }
+
                 buffer.Append(DICTIONARY_END);
             }
             else

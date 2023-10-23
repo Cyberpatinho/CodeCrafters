@@ -27,6 +27,11 @@ namespace codecrafters_bittorrent.Utils
                         if (decodedObject.Value is long longValue)
                             propertyInfo.SetValue(result, longValue);
                     }
+                    else if (propertyInfo.PropertyType == typeof(byte[]))
+                    {
+                        byte[] bytes = (byte[])decodedObject.Value;
+                        propertyInfo.SetValue(result, bytes);
+                    }
                     else if (propertyInfo.PropertyType == typeof(Torrent.TorrentInfo))
                     {
                         if (decodedObject.Value is Dictionary<string, DecodedObject> subDict)

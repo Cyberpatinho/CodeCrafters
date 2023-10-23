@@ -1,30 +1,61 @@
 ﻿using codecrafters_bittorrent.src.Objects;
 using codecrafters_bittorrent.src.Bencoding;
-using System.Text.Json.Serialization;
-using System.Text.Json;
 using codecrafters_bittorrent.src.Utils;
 using codecrafters_bittorrent.Utils;
 using codecrafters_bittorrent.src.Attributes;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace codecrafters_bittorrent.src.Services
 {
     public class TorrentService
     {
-        private Torrent Metainfo { get; set; }
+        private DecodedObject _decodedTorrent;
+        private Torrent _metainfo { get; set; }
+
+        [Display("Info Hash")]
+        public string Hash { get; set; }
+
         public TorrentService(string filepath)
         {
-            if (File.Exists(filepath))
+            if (string.IsNullOrEmpty(filepath) || File.Exists(filepath))
             {
-                byte[] bytes = File.ReadAllBytes(filepath);
-                var decodedObject = Bencode.Decode(bytes);
-
-                Metainfo = decodedObject.Value is Dictionary<string, DecodedObject> data
-                    ? TorrentMapper.Map<Torrent>(data)
-                    : throw new InvalidDataException($"Error: No metainfo dictionary wrapper for {Path.GetFileName(filepath)}.");
+                DecodedTorrent(filepath);
             }
             else
                 throw new FileNotFoundException($"Error: No file found for path: {filepath}.");
+
+            LoadMetainfo();
+            CalculateHash();
+        }
+
+        private void DecodedTorrent(string filepath)
+        {
+            byte[] bytes = File.ReadAllBytes(filepath);
+            _decodedTorrent = Bencode.Decode(bytes);
+        }
+
+        private void LoadMetainfo()
+        {
+            _metainfo = _decodedTorrent.Value is Dictionary<string, DecodedObject> data
+                ? TorrentMapper.Map<Torrent>(data)
+                : throw new InvalidDataException($"Error: No dictionary wrapper in metainfo file.");
+        }
+
+        private void CalculateHash()
+        {
+            if (_decodedTorrent.Value is Dictionary<string, DecodedObject> data)
+            {
+                using (SHA1 sha1 = SHA1.Create())
+                {
+                    byte[] bytes = Bencode.Encode(data["info"]);
+
+                    Hash = Helper.ToHexadecimal(sha1.ComputeHash(bytes));
+                }
+            }
+            else
+                throw new InvalidDataException($"Error: No dictionary wrapper in metainfo file.");
         }
 
         private string? GetInfo<T>(T obj, string propertyName)
@@ -43,8 +74,9 @@ namespace codecrafters_bittorrent.src.Services
 
         public string GetInfo(string propertyName)
         {
-            string? result = GetInfo(Metainfo, propertyName) ?? 
-                GetInfo(Metainfo.Info, propertyName);
+            string? result = GetInfo(_metainfo, propertyName) ?? 
+                GetInfo(_metainfo.Info, propertyName) ??
+                GetInfo(this, propertyName);
 
             if (result == null)
                 throw new InvalidOperationException($"Error: Unknown property {propertyName} or value not set.");

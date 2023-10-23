@@ -3,7 +3,6 @@ using codecrafters_bittorrent.src.Services;
 using codecrafters_bittorrent.src.Utils;
 using System.Text.Json;
 
-// Parse arguments
 var (command, param) = args.Length switch
 {
     0 => throw new InvalidOperationException("Usage: your_bittorrent.sh <command> <param>"),
@@ -26,6 +25,8 @@ else if (command == "info")
 
     Console.WriteLine(torrentService.GetInfo("Announce"));
     Console.WriteLine(torrentService.GetInfo("Length"));
+    Console.WriteLine(torrentService.GetInfo("Hash"));
+
 }
 else
 {

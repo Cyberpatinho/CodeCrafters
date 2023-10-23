@@ -7,6 +7,7 @@ namespace codecrafters_bittorrent.src.Objects
         [Name("announce")]
         [Display("Tracker URL")]
         public string? Announce { get; set; }
+
         [Name("info")]
         public TorrentInfo Info { get; set; }
 
@@ -25,7 +26,7 @@ namespace codecrafters_bittorrent.src.Objects
             [Name("piece length")]
             public long PieceLength { get; set; } = 0;
             [Name("pieces")]
-            public string? Pieces { get; set; }
+            public byte[] Pieces { get; set; }
         }
     }
 }
