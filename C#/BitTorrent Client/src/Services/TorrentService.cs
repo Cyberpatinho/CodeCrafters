@@ -21,29 +21,29 @@ namespace codecrafters_bittorrent.src.Services
         {
             if (string.IsNullOrEmpty(filepath) || File.Exists(filepath))
             {
-                DecodedTorrent(filepath);
+                _decodedTorrent = DecodeTorrent(filepath);
             }
             else
                 throw new FileNotFoundException($"Error: No file found for path: {filepath}.");
 
-            LoadMetainfo();
-            CalculateHash();
+            _metainfo = LoadMetainfo();
+            Hash = CalculateHash();
         }
 
-        private void DecodedTorrent(string filepath)
+        private DecodedObject DecodeTorrent(string filepath)
         {
             byte[] bytes = File.ReadAllBytes(filepath);
-            _decodedTorrent = Bencode.Decode(bytes);
+            return Bencode.Decode(bytes);
         }
 
-        private void LoadMetainfo()
+        private Torrent LoadMetainfo()
         {
-            _metainfo = _decodedTorrent.Value is Dictionary<string, DecodedObject> data
+            return _decodedTorrent.Value is Dictionary<string, DecodedObject> data
                 ? TorrentMapper.Map<Torrent>(data)
                 : throw new InvalidDataException($"Error: No dictionary wrapper in metainfo file.");
         }
 
-        private void CalculateHash()
+        private string CalculateHash()
         {
             if (_decodedTorrent.Value is Dictionary<string, DecodedObject> data)
             {
@@ -51,7 +51,7 @@ namespace codecrafters_bittorrent.src.Services
                 {
                     byte[] bytes = Bencode.Encode(data["info"]);
 
-                    Hash = Helper.ToHexadecimal(sha1.ComputeHash(bytes));
+                    return Helper.ToHexadecimal(sha1.ComputeHash(bytes));
                 }
             }
             else
